@@ -93,11 +93,12 @@ function home(){
 function list(){const q=S.q.toLowerCase(),x=window._l.filter(d=>!q||(d[0]+d[1]+d[2]+d[3]).toLowerCase().includes(q));
  $('#ls').innerHTML=x.map(d=>{const s=st(d[0]);return `<div class="card" onclick="open_('${d[0]}')"><div class="row"><div class="g"><b>${E(d[2])}${d[3]?' ('+E(d[3])+')':''}</b><div class="m">${d[0]} · ${E(d[1])}</div></div><span class="b s-${s.split(' ')[0]}">${s}</span></div></div>`}).join('')||'<p class="m">Không có thiết bị phù hợp.</p>'}
 
-function open_(id){S.sel=id;const k=id+'_'+S.ym,d=D.find(x=>x[0]==id);S.cur=JSON.parse(JSON.stringify(logs[k]||{ym:S.ym,id,date:today(),it:{},by:localStorage.getItem('who')||'',mins:d[5]||'',bad:'',parts:'',res:'Chưa'}));if(!S.cur.it)S.cur.it={};form();scrollTo(0,0)}
+function open_(id){S.sel=id;const k=id+'_'+S.ym,d=D.find(x=>x[0]==id);S.cur=JSON.parse(JSON.stringify(logs[k]||{ym:S.ym,id,date:today(),it:{},by:localStorage.getItem('who')||'',before:[],after:[],mins:d[5]||'',bad:'',parts:'',res:'Chưa'}));if(!S.cur.it)S.cur.it={};if(!S.cur.before)S.cur.before=[];if(!S.cur.after)S.cur.after=[];form();scrollTo(0,0)}
 
 function form(){const d=D.find(x=>x[0]==S.sel),c=S.cur,its=items(d,mo(S.ym));
  $('#app').innerHTML=`<button onclick="S.sel=null;draw()">← Danh sách</button><div class="card"><b>${E(d[2])}${d[3]?' ('+E(d[3])+')':''}</b><div class="m">${d[0]} · ${E(d[1])} · Nhân lực: ${E(d[6])} · Dự kiến ${d[5]} phút</div></div>
 <div class="card"><div class="row"><b class="g">Hạng mục tháng ${mo(S.ym)}/${S.ym.slice(0,4)}</b><button onclick="allok()">Đạt tất cả</button></div>${its.map((x,i)=>`<div class="it"><div>${i+1}. ${E(x[1])}</div><div class="m">${x[0]} · Đạt khi: ${E(x[3])}${x[2]>1?' · chu kỳ '+x[2]+' tháng':''}</div><div class="ch">${[['ok','✓ Đạt'],['ng','✗ Lỗi'],['na','NA']].map(([k,t])=>`<button class="${k} ${c.it[x[1]]==k?'on':''}" onclick="mark(${i},'${k}')">${t}</button>`).join('')}</div></div>`).join('')}</div>
+<div class="card"><b>Hình ảnh</b>${ph('before','Trước khi thực hiện')}${ph('after','Sau khi thực hiện')}<div id="msg" class="m"></div></div>
 <div class="card"><label>Ngày thực hiện</label><input type="date" value="${c.date}" onchange="S.cur.date=this.value"><label>Người thực hiện</label><input type="text" value="${E(c.by)}" onchange="S.cur.by=this.value"><label>Thời gian thực tế (phút)</label><input type="number" value="${E(c.mins)}" onchange="S.cur.mins=this.value">
 <label>Bất thường phát hiện</label><textarea rows="2" onchange="S.cur.bad=this.value">${E(c.bad)}</textarea><label>Phụ tùng / vật tư thay thế</label><textarea rows="2" onchange="S.cur.parts=this.value">${E(c.parts)}</textarea>
 <label>Kết quả</label><select onchange="S.cur.force=this.value"><option value="">Tự động theo checklist</option>${['Đạt','Theo dõi','Không đạt'].map(v=>`<option ${c.force==v?'selected':''}>${v}</option>`).join('')}</select></div>
@@ -110,10 +111,18 @@ async function fin(){const d=D.find(x=>x[0]==S.sel),its=items(d,mo(S.ym)),v=its.
  c.res=c.force||(v.includes('ng')?'Không đạt':v.every(Boolean)?'Đạt':v.some(Boolean)?'Đang làm':'Chưa');
  if(c.res=='Chưa'&&!c.force&&!c.bad){alert('Chưa đánh dấu hạng mục nào.');return}
  if(c.by)localStorage.setItem('who',c.by);c.name=d[2]+(d[3]?' ('+d[3]+')':'');c.area=d[1];c.ts=Date.now();
- if(await save(S.sel,c)){S.sel=null;draw()}}
+ const p=JSON.parse(JSON.stringify(c,(k,v)=>k=='tmp'?undefined:v));
+ if(await save(S.sel,p)){S.sel=null;draw()}}
 
 function hist(){const x=Object.values(logs).filter(l=>l.ym==S.ym).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
- $('#app').innerHTML=head()+`<div class="row" style="margin-top:8px"><span class="g m">${x.length} bản ghi trong tháng</span><button onclick="csv()">Tải CSV (tất cả)</button></div>`+(x.map(l=>`<div class="card" onclick="open_('${l.id}')"><div class="row"><div class="g"><b>${E(l.name)}</b><div class="m">${l.id} · ${E(l.area)} · ${l.date} · ${E(l.by)} · ${l.mins} phút</div>${l.bad?`<div class="m">Bất thường: ${E(l.bad)}</div>`:''}${l.parts?`<div class="m">Vật tư: ${E(l.parts)}</div>`:''}</div><span class="b s-${l.res.split(' ')[0]}">${l.res}</span></div></div>`).join('')||'<p class="m">Chưa có bản ghi.</p>')}
+ $('#app').innerHTML=head()+`<div class="row" style="margin-top:8px"><span class="g m">${x.length} bản ghi trong tháng</span><button onclick="csv()">Tải CSV (tất cả)</button></div>`+(x.map(l=>`<div class="card" onclick="open_('${l.id}')"><div class="row"><div class="g"><b>${E(l.name)}</b><div class="m">${l.id} · ${E(l.area)} · ${l.date} · ${l.by)} · ${l.mins} phút</div>${(l.before||[]).length+(l.after||[]).length?`<div class="m">📷 Trước ${(l.before||[]).length} · Sau ${(l.after||[]).length}</div>`:''}${l.bad?`<div class="m">Bất thường: ${E(l.bad)}</div>`:''}${l.parts?`<div class="m">Vật tư: ${E(l.parts)}</div>`:''}</div><span class="b s-${l.res.split(' ')[0]}">${l.res}</span></div></div>`).join('')||'<p class="m">Chưa có bản ghi.</p>')}
+
+const rs=f=>new Promise((ok,no)=>{const i=new Image,u=URL.createObjectURL(f);i.onload=()=>{const s=Math.min(1,900/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.65))};i.onerror=()=>no(new Error('Không đọc được ảnh'));i.src=u});
+
+function ph(k,t){const a=S.cur[k]||[];return `<label>${t}</label><div class="row">${a.map((p,i)=>`<span style="position:relative"><a href="${E(p.url)}" target="_blank" rel="noopener"><img src="${E(p.tmp||p.url)}" style="width:78px;height:78px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)"></a><button onclick="delp('${k}',${i})" style="position:absolute;top:-6px;right:-6px;padding:0 7px;border-radius:12px">×</button></span>`).join('')}<label style="margin:0;display:inline-block;border:1px dashed var(--bd);border-radius:8px;padding:26px 14px;cursor:pointer;color:var(--fg)">📷 Chụp / chọn ảnh<input type="file" accept="image/*" multiple hidden onchange="addp('${k}',this)"></label></div>`}
+
+async function addp(k,el){const fs=[...el.files];el.value='';for(const f of fs){try{const b=$('#msg');if(b)b.textContent='Đang xử lý ảnh…';const url=await rs(f);(S.cur[k]=S.cur[k]||[]).push({id:Date.now()+'_'+Math.random().toString(36).slice(2,6),url})}catch(e){alert('Không xử lý được ảnh: '+(e.message||e.code))}}form()}
+function delp(k,i){S.cur[k].splice(i,1);form()}
 
 function csv(){
  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
@@ -126,8 +135,7 @@ function csv(){
  a.click();
 }
 
-// Gắn các hàm ra window để HTML onclick gọi được trong script type="module"
-Object.assign(window, { S, draw, list, open_, mark, allok, fin, csv });
+Object.assign(window, { S, draw, list, open_, mark, allok, fin, addp, delp, csv });
 
 init();
 </script></body></html>
